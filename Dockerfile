@@ -1,14 +1,28 @@
-FROM ubuntu:latest
+FROM ubuntu:18.04
 
-EXPOSE 40401
+RUN apt-get update -qq \
+  && apt-get install -qq curl openjdk-8-jre-headless nodejs npm libsodium23 systemd nano\
+  && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies
-RUN apt-get update && apt-get install -y wget sudo
+WORKDIR /home/rnode/
 
-# Download rnode installer
-RUN wget https://github.com/rchain/rchain/releases/download/v0.7.1/rnode_0.7.1_all.deb -o /root/rnode_0.7.1_all.deb
+RUN npm i -g npm -q
 
-# Install rnode
-RUN cd /root && sudo apt-get install -y ./rnode_0.7.1_all.deb
+COPY scripts/* scripts/
 
-ENTRYPOINT ["rnode"]
+RUN bash scripts/install -q
+
+COPY app app/
+RUN cd app && npm install -q
+
+RUN cd app && mkdir -p evaluations
+RUN cd app && touch evaluations/output.log
+
+COPY config .rnode/
+RUN touch .rnode/rnode.log
+
+RUN chmod -R 777 /home/rnode/
+
+EXPOSE 40402
+
+CMD ["bash", "scripts/start"]
